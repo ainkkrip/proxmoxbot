@@ -1,0 +1,22 @@
+bot:
+  token: ""
+  admin_ids:
+    - 1231123
+  proxy: ""
+
+node:
+  name: "Proxmox Main Node"
+
+vms:
+  - id: "vm1"
+    name: "Ubuntu VM 1"
+    host: "" # локал ip
+    user: "root"
+    password: "urpswd" # Если используете пароль
+    # ssh_key_path: "/root/.ssh/id_rsa" # Раскомментируйте, если используете SSH ключ
+    
+  - id: "vm2"
+    name: "Ubuntu VM 2"
+    host: ""
+    user: "root"
+    password: "urpswd"
