@@ -33,32 +33,55 @@ def format_uptime(seconds):
     parts.append(f"{m}m")
     return " ".join(parts)
 
+async def get_single_vm_status(vm_config):
+    """Возвращает статус конкретной ВМ: (status_text, is_running)"""
+    vmid = vm_config['id']
+    proc = await asyncio.create_subprocess_shell(
+        f"qm status {vmid} --verbose",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    out, _ = await proc.communicate()
+    out = out.decode()
+    
+    status = "unknown"
+    uptime = 0
+    for line in out.splitlines():
+        if line.startswith("status:"):
+            status = line.split(":", 1)[1].strip()
+        elif line.startswith("uptime:"):
+            uptime = line.split(":", 1)[1].strip()
+            
+    if status == "running":
+        up_str = format_uptime(uptime)
+        return f"Запущена (Uptime: {up_str})", True
+    elif status == "stopped":
+        return "Выключена", False
+    else:
+        return status, False
+
 async def get_all_vms_status(vms_config_dict):
     """Возвращает строку со статусами всех ВМ"""
     text_lines = ["\n<b>Статус виртуальных машин:</b>"]
     for vm_id, vm in vms_config_dict.items():
-        vmid = vm['id']
-        proc = await asyncio.create_subprocess_shell(f"qm status {vmid} --verbose", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-        out, _ = await proc.communicate()
-        out = out.decode()
-        
-        status = "unknown"
-        uptime = 0
-        for line in out.splitlines():
-            if line.startswith("status:"):
-                status = line.split(":", 1)[1].strip()
-            elif line.startswith("uptime:"):
-                uptime = line.split(":", 1)[1].strip()
-                
-        if status == "running":
-            up_str = format_uptime(uptime)
-            text_lines.append(f"<b>{vm['name']}</b>: Запущена (Uptime: {up_str})")
-        elif status == "stopped":
-            text_lines.append(f"<b>{vm['name']}</b>: Выключена")
-        else:
-            text_lines.append(f"<b>{vm['name']}</b>: {status}")
-            
+        status_text, _ = await get_single_vm_status(vm)
+        text_lines.append(f"<b>{vm['name']}</b>: {status_text}")
     return "\n".join(text_lines)
+
+async def get_vm_full_info(vm_config):
+    """Сводная информация о конкретной ВМ: статус + метрики CPU/RAM/Диск"""
+    status_text, is_running = await get_single_vm_status(vm_config)
+    lines = [
+        f"<b>Виртуальная машина:</b> {vm_config['name']}",
+        f"<b>Статус:</b> {status_text}\n"
+    ]
+    if is_running:
+        stats = await get_vm_stats(vm_config)
+        lines.append(stats)
+    else:
+        lines.append("<i>ВМ выключена. Метрики недоступны.</i>")
+    return "\n".join(lines)
+
 
 async def run_qm_guest_exec(vmid, command):
     """Асинхронное выполнение команды внутри VM через qm guest exec"""
