@@ -71,6 +71,14 @@ def get_allowed_vm(user_id, target_vm_id=None):
 
     return None, "Доступ запрещен. Ваш ID не зарегистрирован."
 
+async def notify_admins(text: str):
+    """Отправка уведомления всем администраторам бота"""
+    for admin_id in ADMINS:
+        try:
+            await bot.send_message(admin_id, text)
+        except Exception as e:
+            logging.error(f"Не удалось отправить уведомление администратору {admin_id}: {e}")
+
 # --- Клавиатуры ---
 def get_main_keyboard():
     buttons = []
@@ -208,6 +216,22 @@ async def vm_actions(callback: CallbackQuery):
         if res: await callback.message.answer(f"Результат: {res}")
     await callback.answer()
 
+    # Уведомление для администратора, если действие совершил гость
+    if not is_admin(user_id):
+        user_info = callback.from_user.full_name
+        if callback.from_user.username:
+            user_info += f" (@{callback.from_user.username})"
+        user_info += f" [ID: <code>{user_id}</code>]"
+        action_name = "Перезагрузка" if action == "reboot" else "Выключение"
+        notify_text = (
+            f"🔔 <b>[Действие гостя]</b>\n"
+            f"👤 <b>Пользователь:</b> {user_info}\n"
+            f"🖥 <b>ВМ:</b> {vm['name']} (<code>{vm['id']}</code>)\n"
+            f"⚡ <b>Действие:</b> {action_name} ВМ\n"
+            f"📋 <b>Результат:</b> {html.escape(res or 'Команда отправлена')}"
+        )
+        await notify_admins(notify_text)
+
 # --- Консоль (.console) ---
 @dp.message(F.text.startswith(".console"))
 async def console_command(message: Message):
@@ -267,6 +291,23 @@ async def console_command(message: Message):
         result = result[:3900] + "\n...[Слишком длинный вывод, обрезан]"
         
     await wait_msg.edit_text(f"<pre>{html.escape(result)}</pre>")
+
+    # Если команду выполнял гость — отправляем уведомление главному администратору
+    if not is_adm:
+        user_info = message.from_user.full_name
+        if message.from_user.username:
+            user_info += f" (@{message.from_user.username})"
+        user_info += f" [ID: <code>{user_id}</code>]"
+        
+        preview_res = result if len(result) <= 1500 else result[:1500] + "\n...[Обрезано для уведомления]"
+        notify_text = (
+            f"🔔 <b>[Консоль: Гость выполнил команду]</b>\n"
+            f"👤 <b>Пользователь:</b> {user_info}\n"
+            f"🖥 <b>ВМ:</b> {vm['name']} (<code>{vm['id']}</code>)\n"
+            f"💻 <b>Команда:</b>\n<code>{html.escape(command)}</code>\n\n"
+            f"📋 <b>Результат:</b>\n<pre>{html.escape(preview_res)}</pre>"
+        )
+        await notify_admins(notify_text)
 
 async def main():
     print("Бот успешно запущен. Ожидание команд...")
