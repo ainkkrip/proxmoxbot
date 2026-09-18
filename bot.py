@@ -224,11 +224,11 @@ async def vm_actions(callback: CallbackQuery):
         user_info += f" [ID: <code>{user_id}</code>]"
         action_name = "Перезагрузка" if action == "reboot" else "Выключение"
         notify_text = (
-            f"🔔 <b>[Действие гостя]</b>\n"
-            f"👤 <b>Пользователь:</b> {user_info}\n"
-            f"🖥 <b>ВМ:</b> {vm['name']} (<code>{vm['id']}</code>)\n"
-            f"⚡ <b>Действие:</b> {action_name} ВМ\n"
-            f"📋 <b>Результат:</b> {html.escape(res or 'Команда отправлена')}"
+            f"<b>Действие</b>\n"
+            f"<b>Пользователь:</b> {user_info}\n"
+            f"<b>VM:</b> {vm['name']} (<code>{vm['id']}</code>)\n"
+            f"<b>Действие:</b> {action_name} VM\n"
+            f"<b>Результат:</b> {html.escape(res or 'Команда отправлена')}"
         )
         await notify_admins(notify_text)
 
@@ -301,11 +301,11 @@ async def console_command(message: Message):
         
         preview_res = result if len(result) <= 1500 else result[:1500] + "\n...[Обрезано для уведомления]"
         notify_text = (
-            f"🔔 <b>[Консоль: Гость выполнил команду]</b>\n"
-            f"👤 <b>Пользователь:</b> {user_info}\n"
-            f"🖥 <b>ВМ:</b> {vm['name']} (<code>{vm['id']}</code>)\n"
-            f"💻 <b>Команда:</b>\n<code>{html.escape(command)}</code>\n\n"
-            f"📋 <b>Результат:</b>\n<pre>{html.escape(preview_res)}</pre>"
+            f"<b>Консоль:выполнена команда</b>\n"
+            f"<b>Пользователь:</b> {user_info}\n"
+            f"<b>VM:</b> {vm['name']} (<code>{vm['id']}</code>)\n"
+            f"<b>Команда:</b>\n<code>{html.escape(command)}</code>\n\n"
+            f"<b>Результат:</b>\n<pre>{html.escape(preview_res)}</pre>"
         )
         await notify_admins(notify_text)
 
